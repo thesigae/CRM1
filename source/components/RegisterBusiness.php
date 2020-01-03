@@ -37,6 +37,50 @@ class RegisterBusiness extends \Cms\Classes\ComponentBase
         return $user;
     }
     
+    public function onCreateBusiness() {
+        $user = $this->getUser();
+        $businessName = Input::get('businessName');
+        $businessDescription = Input::get('businessDescription');
+        $business = $user->business()->create([
+            'name' => $businessName,
+            'slug' => Str::slug($businessName),
+            'description' => $businessDescription
+            ]);
+        $business->slug = $business->slug.'-'.$business->id;
+        $business->save();
+        $user->business()->add($business);
+        $employee = $user->employee()->create();
+        $user->employee()->add($employee);
+        $group = $employee->group()->create([
+            'name' => 'Owner',
+            'slug' => 'owner',
+            'description' => 'This is the company\'s owner group'
+            ]);
+        $employee->group()->add($group);
+        $employee->save();
+        $role = $group->role()->create([
+            'name' => 'Owner',
+            'slug' => 'owner',
+            'roles' => [
+                'employees' => [
+                    $user->id => [
+                        'read' => true,
+                        'write' => true,
+                        'update' => true,
+                        'develop' => true,
+                        'admin' => true
+                        ]
+                    ]
+                ]
+            ]);
+        $role->business()->add($business);
+        $role->save();
+        $group->role()->add($role);
+        $group->save();
+        $user->save();
+        return Redirect::refresh();
+    }
+    
     public function getBusiness($user) {
         return $user->business;
     }
